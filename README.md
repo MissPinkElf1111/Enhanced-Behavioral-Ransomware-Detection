@@ -216,8 +216,6 @@ The script also evaluates three storage/memory fusion-weight settings:
 
 The report identifies the preferred weight using validation F1 score. Results, training summaries, models, and plots are saved in `ablation/`.
 
-For this comparison, run Step 05A before Step 06, then run Step 08A after Step 08.
-
 ### Detection Evaluation
 
 `10_evaluate_detection.py` calibrates each execution-level threshold at the **95th percentile of benign validation execution scores**.
