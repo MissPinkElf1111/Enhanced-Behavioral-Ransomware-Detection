@@ -350,7 +350,7 @@ Planned work includes:
 - Repeated experiments with multiple random seeds.
 - Comparisons using the same execution sets.
 
-The current repository contains scripts 01–10. The planned generalisation stage is not included in the reviewed implementation.
+The repository contains scripts 01–10, with additional scripts 05A and 08A for feature-set and fusion-weight comparisons. A separate cross-dataset and cross-hardware generalisation stage is not yet included.
 
 ## Authors
 
