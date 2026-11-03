@@ -1,4 +1,4 @@
-# Beyond RanSMAP: Enhanced Behavioral Ransomware Detection with Engineered Features and Hybrid Deep Learning
+# Enhanced Behavioral Ransomware Detection
 
 **MSc Applied Computer Science | Fairleigh Dickinson University**  
 **Fall 2026 Capstone Project | Group 1**
