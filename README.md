@@ -49,25 +49,6 @@ The expected schemas are defined in `02_analyze_data.py`, `03_combine_data.py`, 
 
 Fields include timestamp components, logical block addresses (LBA), guest physical addresses (GPA), access sizes, and entropy values where available. Column order differs between datasets and operations and must match the schemas in the code.
 
-### Execution Naming
-
-Source filenames are used to identify executions.
-
-For example:
-
-```text
-sample01_ata_read.csv
-sample01_ata_write.csv
-sample01_mem_read.csv
-sample01_mem_write.csv
-```
-
-These files map to execution ID `sample01`.
-
-For files named only by operation, such as `ata_read.csv`, the relative parent directory supplies the execution ID.
-
-Execution IDs must distinguish separate runs within each dataset. Storage and memory traces from the same run must have matching IDs for fusion.
-
 ## Implementation
 
 ### Data Combination and Cleaning
