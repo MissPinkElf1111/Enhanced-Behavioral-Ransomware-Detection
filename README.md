@@ -202,6 +202,22 @@ Normalisation uses benign validation statistics.
 
 Fusion is performed on matching RanSMAP and Benign execution summaries. RanSAP is evaluated through storage models only because it does not contain memory traces.
 
+### Ablation Study
+
+`08A_ablation_study.py` compares the 23-feature and 86-feature configurations using autoencoder, temporal, Isolation Forest, and combined scores.
+
+It trains the 23-feature models on benign data and loads the expanded-feature execution scores from Step 08. Comparisons use matching executions and check that their window counts agree.
+
+The script also evaluates three storage/memory fusion-weight settings:
+
+- 40% storage and 60% memory.
+- 50% storage and 50% memory.
+- 60% storage and 40% memory.
+
+The report identifies the preferred weight using validation F1 score. Results, training summaries, models, and plots are saved in `ablation/`.
+
+For this comparison, run Step 05A before Step 06, then run Step 08A after Step 08.
+
 ### Detection Evaluation
 
 `10_evaluate_detection.py` calibrates each execution-level threshold at the **95th percentile of benign validation execution scores**.
