@@ -1,8 +1,5 @@
 # Enhanced Behavioral Ransomware Detection
 
-**MSc Applied Computer Science | Fairleigh Dickinson University**  
-**Fall 2026 Capstone Project | Group 1**
-
 ## Overview
 
 This project implements an offline ransomware detection pipeline using low-level storage and memory access traces from the RanSAP and RanSMAP datasets.
