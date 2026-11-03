@@ -309,6 +309,10 @@ Training epochs and validation reconstruction losses are not reported in the mid
 | `evaluation/` | Window scores, execution summaries, and combined scores |
 | `analysis/` | Data quality checks, score statistics, outliers, and plots |
 | `performance/` | Classification metrics, predictions, thresholds, and confusion matrices |
+| `features_paper/` | The 5 storage and 18 memory comparison features |
+| `splits_paper/` | Comparison features partitioned using the shared execution assignments |
+| `ablation/` | Feature-set and fusion-weight comparisons, training summaries, reports, and plots |
+| `ablation/models_paper/` | Models and calibration information for the 23-feature configuration |
 
 ### Saved Models
 
