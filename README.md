@@ -117,6 +117,17 @@ features/memory_execute_features.csv
 
 The training and evaluation scripts merge the operation-specific features using their shared execution and window keys.
 
+### Feature-Set Comparison
+
+`05A_paper_feature_engineering.py` extracts a comparison feature set based on the RanSMAP paper:
+
+- 5 storage features: read throughput, write throughput, read and write LBA variance, and average write entropy.
+- 18 memory features: write and readwrite entropy, 12 page-type access counts, and 4 GPA variances.
+
+The files are saved in `features_paper/`. This provides a 23-feature configuration for comparison with the expanded 86-feature configuration.
+
+`06_split_data.py` applies the original execution assignments and saves the comparison partitions in `splits_paper/`.
+
 ### Execution-Level Splitting
 
 `06_split_data.py` uses target proportions of:
