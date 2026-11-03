@@ -98,69 +98,6 @@ For files named only by operation, such as `ata_read.csv`, the relative parent d
 
 Execution IDs must distinguish separate runs within each dataset. Storage and memory traces from the same run must have matching IDs for fusion.
 
-## Installation
-
-Clone the repository:
-
-```bash
-git clone https://github.com/MissPinkElf1111/2026-Fall-Capstone.git
-cd 2026-Fall-Capstone
-```
-
-Create a virtual environment:
-
-```bash
-python -m venv .venv
-```
-
-Activate it on Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-Or on macOS/Linux:
-
-```bash
-source .venv/bin/activate
-```
-
-Install the required packages:
-
-```bash
-python -m pip install --upgrade pip
-python -m pip install numpy pandas scikit-learn torch joblib matplotlib
-```
-
-The repository does not currently include pinned dependency versions. Record the Python and package versions used for each experiment.
-
-PyTorch uses CUDA when available and otherwise runs on the CPU.
-
-## Running the Pipeline
-
-Run the scripts from the repository root in this order:
-
-```bash
-python 01_inspect_data.py
-python 02_analyze_data.py
-python 03_combine_data.py
-python 04_prepare_data.py
-python 05_feature_engineering.py
-python 06_split_data.py
-python 07_train_models.py
-python 08_evaluate_models.py
-python 09_analyze_evalutaion.py
-python 10_evaluate_detection.py
-```
-
-All file paths are relative to the current working directory. Output directories are created automatically.
-
-Steps 09 and 10 both use Step 08 outputs. Step 10 does not require Step 09.
-
-Rerunning a stage can overwrite previous outputs. Preserve experiment results before changing settings or rerunning the pipeline.
-
-For environments without a graphical display, set `MPLBACKEND=Agg` before running the plotting scripts.
-
 ## Implementation
 
 ### Data Combination and Cleaning
