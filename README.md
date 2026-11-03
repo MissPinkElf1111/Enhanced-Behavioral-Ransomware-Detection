@@ -28,7 +28,7 @@ The pipeline extracts behavioural features, trains models on benign activity, an
 | `04_prepare_data.py` | Remove unused columns and invalid records | `prepared/` |
 | `05_feature_engineering.py` | Extract behavioural features in 0.1-second windows | `features/` |
 | `05A_paper_feature_engineering.py` | Extract the 23-feature comparison set: 5 storage and 18 memory features | `features_paper/` |
-| `06_split_data.py` | Create shared execution-level training, validation, and test assignments | `splits/` |
+| `06_split_data.py` | Create shared execution-level splits for the expanded features and, when available, the 23-feature comparison set | `splits/`, `splits_paper/` |
 | `07_train_models.py` | Train storage and memory autoencoders and Isolation Forest models | `models/` |
 | `08_evaluate_models.py` | Calculate window scores, execution summaries, and combined scores | `evaluation/` |
 | `08A_ablation_study.py` | Compare the 23-feature and 86-feature configurations and evaluate three fusion-weight settings | `ablation/` |
