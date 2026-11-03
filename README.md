@@ -345,9 +345,9 @@ Planned work includes:
 - Additional trace collection using BitVisor and Windows 10.
 - Random Forest and 1D-CNN–LSTM comparison models.
 - Cross-dataset and cross-hardware testing.
-- Feature and window-size ablation.
+- Individual-feature, feature-group, and window-size ablation beyond the implemented 23-versus-86 feature comparison.
+- Additional fusion methods beyond the implemented 40/60, 50/50, and 60/40 weight comparisons.
 - Repeated experiments with multiple random seeds.
-- Alternative score-fusion methods.
 - Comparisons using the same execution sets.
 
 The current repository contains scripts 01–10. The planned generalisation stage is not included in the reviewed implementation.
@@ -359,13 +359,7 @@ The current repository contains scripts 01–10. The planned generalisation stag
 - Kashmin N. Wijayasekara
 - Junyi Yu
 
-## References and Data Sources
-
-1. M. Hirano, R. Hodota, and R. Kobayashi. “RanSAP: An open dataset of ransomware storage access patterns for training machine learning models.” *Forensic Science International: Digital Investigation*, 40, 301314, 2022. DOI: `10.1016/j.fsidi.2021.301314`.
-
-2. M. Hirano and R. Kobayashi. “RanSMAP: Open dataset of ransomware storage and memory access patterns for creating deep learning based ransomware detectors.” *Computers & Security*, 150, 104202, 2025. DOI: `10.1016/j.cose.2024.104202`.
-
-Dataset repositories:
+## Data Sources
 
 - [RanSAP](https://github.com/manabu-hirano/RanSAP)
 - [RanSMAP](https://github.com/manabu-hirano/RanSMAP)
