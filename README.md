@@ -33,35 +33,6 @@ The pipeline extracts behavioural features, trains models on benign activity, an
 | `09_analyze_evalutaion.py` | Analyse score distributions, novelty rates, outliers, and data quality | `analysis/` |
 | `10_evaluate_detection.py` | Calibrate detection thresholds and calculate classification metrics | `performance/` |
 
-
-## Data Requirements
-
-The following files are included in the repository.
-
-```text
-2026-Fall-Capstone/
-├── RanSAP/
-├── RanSMAP/
-├── Benign/
-├── 01_inspect_data.py
-├── 02_analyze_data.py
-├── 03_combine_data.py
-├── 04_prepare_data.py
-├── 05_feature_engineering.py
-├── 06_split_data.py
-├── 07_train_models.py
-├── 08_evaluate_models.py
-├── 09_analyze_evalutaion.py
-├── 10_evaluate_detection.py
-└── README.md
-```
-
-| Folder | Data | Label |
-| --- | --- | --- |
-| `RanSAP/` | WannaCry storage traces | `1` — ransomware |
-| `RanSMAP/` | WannaCry storage and memory traces | `1` — ransomware |
-| `Benign/` | Firefox, Office, and Zip storage and memory traces | `0` — benign |
-
 ### Supported Source Files
 
 The scripts search recursively for headerless CSV files with these suffixes:
