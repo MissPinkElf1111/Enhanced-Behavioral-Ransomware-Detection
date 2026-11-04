@@ -1,0 +1,519 @@
+/*
+ * Copyright (c) 2024 Igel Co., Ltd
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <core/arith.h>
+#include <core/config.h>
+#include <core/mm.h>
+#include <net/netapi.h>
+#include "lwip/etharp.h"
+#include "lwip/prot/iana.h"
+#include "lwip/prot/udp.h"
+#include "lwip/prot/dhcp.h"
+#include "lwip/prot/ip.h"
+#include "net_main_internal.h"
+#include "net_main_wg.h"
+#include "tcpip.h"
+
+#define ARP_ASK_GATEWAY 1
+#define ARP_ASK_OTHERS	2
+#define PACK_IP_ADDR(ip) \
+	(((u32)(ip)[3] << 24) | ((u32)(ip)[2] << 16) | ((u32)(ip)[1] << 8) | \
+	 (u32)(ip)[0])
+
+struct wg_gos_task {
+	u32 num_packets;
+	void **packets;
+	u32 *packet_sizes;
+	void *param;
+};
+
+struct arp_data {
+	struct eth_hdr ethhdr;
+	struct etharp_hdr etharphdr;
+};
+
+struct dhcp_data {
+	struct eth_hdr ethhdr;
+	struct ip_hdr iphdr;
+	struct udp_hdr udphdr;
+	struct dhcp_msg dhcpmsg;
+};
+
+struct wg_gos_data {
+	union {
+		struct {
+			u8 guest_mac[6];
+			u8 mac_gateway[6];
+		};
+		u8 fake_eth[14];
+	};
+	ip_addr_t wg_gos_ip;
+	const u8 *gateway;
+	const u8 *netmask;
+	const u8 *gos_ipaddr;
+	const u8 *gos_dns;
+	bool wg_gos_ip_cmp;
+};
+
+static struct netif *netif_vm;
+static struct netif *netif_wg;
+
+struct send_to_wg_pbuf {
+	struct pbuf_custom pc;
+	void *buffer;
+};
+
+struct wg_gos_data *
+wg_gos_new (u8 guest_mac[6])
+{
+	/* Note: mem_malloc is not usable here */
+	struct wg_gos_data *wg_gos_data;
+
+	wg_gos_data = alloc (sizeof *wg_gos_data);
+	memset (wg_gos_data, 0, sizeof *wg_gos_data);
+	memcpy (&wg_gos_data->guest_mac, guest_mac, 6);
+	memcpy (&(wg_gos_data->fake_eth[6]), config.wg_gos.mac_gateway, 6);
+	wg_gos_data->fake_eth[12] = ETHTYPE_IP >> 8;
+	wg_gos_data->fake_eth[13] = (u8)ETHTYPE_IP;
+	return wg_gos_data;
+}
+
+static int
+arp_checker (void *packet, int size, struct wg_gos_data *wg_gos_data)
+{
+	if (size < (SIZEOF_ETH_HDR + SIZEOF_ETHARP_HDR))
+		return 0;
+	struct etharp_hdr *arp_hdr = packet + SIZEOF_ETH_HDR;
+	ip4_addr_t dest_ip;
+
+	SMEMCPY (&dest_ip, &arp_hdr->dipaddr, sizeof dest_ip);
+#ifdef DEBUG_ARP_MAC
+	unsigned char *source_mac = ((unsigned char *)packet) + 6;
+	unsigned char *dest_mac = ((unsigned char *)packet);
+	unsigned char *source_ip = ((unsigned char *)packet) + 28;
+	printf ("ARP Packet Details:\n");
+	printf ("Source MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", source_mac[0],
+		source_mac[1], source_mac[2], source_mac[3], source_mac[4],
+		source_mac[5]);
+	printf ("Destination MAC: %02x:%02x:%02x:%02x:%02x:%02x\n",
+		dest_mac[0], dest_mac[1], dest_mac[2], dest_mac[3],
+		dest_mac[4], dest_mac[5]);
+	printf ("Source IP: %d.%d.%d.%d\n", source_ip[0], source_ip[1],
+		source_ip[2], source_ip[3]);
+	printf ("Destination IP: %d.%d.%d.%d\n", dest_ip[0], dest_ip[1],
+		dest_ip[2], dest_ip[3]);
+#endif
+	ip_addr_t gateway_ip;
+	IP4_ADDR (&gateway_ip, wg_gos_data->gateway[0],
+		  wg_gos_data->gateway[1], wg_gos_data->gateway[2],
+		  wg_gos_data->gateway[3]);
+	if (ip_addr_cmp (&dest_ip, &gateway_ip))
+		return ARP_ASK_GATEWAY;
+	else
+		return ARP_ASK_OTHERS;
+}
+
+static void
+arp_maker (void *packet, struct arp_data *arp_packet,
+	   struct wg_gos_data *wg_gos_data)
+{
+	if (!arp_packet)
+		return;
+	*arp_packet = (struct arp_data) {
+		.ethhdr.dest.addr = { wg_gos_data->guest_mac[0],
+				      wg_gos_data->guest_mac[1],
+				      wg_gos_data->guest_mac[2],
+				      wg_gos_data->guest_mac[3],
+				      wg_gos_data->guest_mac[4],
+				      wg_gos_data->guest_mac[5] },
+		.ethhdr.src.addr = { wg_gos_data->mac_gateway[0],
+				     wg_gos_data->mac_gateway[1],
+				     wg_gos_data->mac_gateway[2],
+				     wg_gos_data->mac_gateway[3],
+				     wg_gos_data->mac_gateway[4],
+				     wg_gos_data->mac_gateway[5] },
+		.ethhdr.type = PP_HTONS (ETHTYPE_ARP),
+		.etharphdr.hwtype = PP_HTONS (LWIP_IANA_HWTYPE_ETHERNET),
+		.etharphdr.proto = NETIF_FLAG_ETHARP,
+		.etharphdr.hwlen = ETH_HWADDR_LEN,
+		.etharphdr.protolen = 0x04,
+		.etharphdr.opcode = PP_HTONS (ARP_REPLY),
+		.etharphdr.shwaddr.addr = { wg_gos_data->mac_gateway[0],
+					    wg_gos_data->mac_gateway[1],
+					    wg_gos_data->mac_gateway[2],
+					    wg_gos_data->mac_gateway[3],
+					    wg_gos_data->mac_gateway[4],
+					    wg_gos_data->mac_gateway[5] },
+		.etharphdr.sipaddr.addrw[0] =
+			(u16)wg_gos_data->gateway[1] << 8 |
+			wg_gos_data->gateway[0],
+		.etharphdr.sipaddr.addrw[1] =
+			(u16)wg_gos_data->gateway[3] << 8 |
+			wg_gos_data->gateway[2],
+		.etharphdr.dhwaddr.addr = { wg_gos_data->guest_mac[0],
+					    wg_gos_data->guest_mac[1],
+					    wg_gos_data->guest_mac[2],
+					    wg_gos_data->guest_mac[3],
+					    wg_gos_data->guest_mac[4],
+					    wg_gos_data->guest_mac[5] },
+		.etharphdr.dipaddr.addrw[0] =
+			(u16)wg_gos_data->gos_ipaddr[1] << 8 |
+			wg_gos_data->gos_ipaddr[0],
+		.etharphdr.dipaddr.addrw[1] =
+			(u16)wg_gos_data->gos_ipaddr[3] << 8 |
+			wg_gos_data->gos_ipaddr[2],
+	};
+}
+
+static int
+dhcp_checker (void *packet, int size, u32 *transaction_id)
+{
+	struct dhcp_data *d = packet;
+	if (d->iphdr._proto == IP_PROTO_UDP &&
+	    d->udphdr.src == PP_HTONS (LWIP_IANA_PORT_DHCP_CLIENT) &&
+	    d->udphdr.dest == PP_HTONS (LWIP_IANA_PORT_DHCP_SERVER)) {
+		*transaction_id = d->dhcpmsg.xid;
+		u8 *options = d->dhcpmsg.options;
+		u8 *end = packet + size;
+		while (options < end) {
+			if (*options == DHCP_OPTION_MESSAGE_TYPE) {
+				if (*(options + 2) == DHCP_DISCOVER)
+					return DHCP_DISCOVER;
+				if (*(options + 2) == DHCP_REQUEST)
+					return DHCP_REQUEST;
+			}
+			/* Jump to next option by adding option length + 2 */
+			options += *(options + 1) + 2;
+		}
+	}
+	return 0;
+}
+
+static void
+dhcp_maker (struct dhcp_data *d, u32 x_id, u8 type,
+	    struct wg_gos_data *wg_gos_data)
+{
+	struct ip_hdr *iphdr;
+
+	if (!d)
+		return;
+	*d = (struct dhcp_data) {
+		.ethhdr.dest.addr = { wg_gos_data->guest_mac[0],
+				      wg_gos_data->guest_mac[1],
+				      wg_gos_data->guest_mac[2],
+				      wg_gos_data->guest_mac[3],
+				      wg_gos_data->guest_mac[4],
+				      wg_gos_data->guest_mac[5] },
+		/* Fake MAC */
+		.ethhdr.src.addr = { wg_gos_data->mac_gateway[0],
+				     wg_gos_data->mac_gateway[1],
+				     wg_gos_data->mac_gateway[2],
+				     wg_gos_data->mac_gateway[3],
+				     wg_gos_data->mac_gateway[4],
+				     wg_gos_data->mac_gateway[5] },
+		.ethhdr.type = PP_HTONS (ETHTYPE_IP),
+		/* IP Header */
+		.iphdr._v_hl = 0x45,
+		.iphdr._tos = 0x10,
+		.iphdr._len = 0x2e01,
+		.iphdr._id = 0x0500,
+		.iphdr._offset = 0,
+		.iphdr._ttl = 0x40,
+		.iphdr._proto = IP_PROTO_UDP,
+		.iphdr._chksum = 0,
+		.iphdr.src.addr = PACK_IP_ADDR (wg_gos_data->gateway),
+		.iphdr.dest.addr = IPADDR_BROADCAST,
+		/* UDP protocol */
+		.udphdr.src = PP_HTONS (LWIP_IANA_PORT_DHCP_SERVER),
+		.udphdr.dest = PP_HTONS (LWIP_IANA_PORT_DHCP_CLIENT),
+		.udphdr.len = 0x1a01,
+		.udphdr.chksum = 0,
+		/* DHCP Message */
+		.dhcpmsg.op = DHCP_BOOTREPLY,
+		.dhcpmsg.htype = LWIP_IANA_HWTYPE_ETHERNET,
+		.dhcpmsg.hlen = ETH_HWADDR_LEN,
+		.dhcpmsg.hops = 0,
+		.dhcpmsg.xid = 0,
+		.dhcpmsg.secs = 0,
+		.dhcpmsg.flags = 0,
+		.dhcpmsg.ciaddr.addr = 0,
+		.dhcpmsg.yiaddr.addr = PACK_IP_ADDR (wg_gos_data->gos_ipaddr),
+		.dhcpmsg.siaddr.addr = PACK_IP_ADDR (wg_gos_data->gateway),
+		.dhcpmsg.giaddr.addr = 0,
+		.dhcpmsg.chaddr = { wg_gos_data->guest_mac[0],
+				    wg_gos_data->guest_mac[1],
+				    wg_gos_data->guest_mac[2],
+				    wg_gos_data->guest_mac[3],
+				    wg_gos_data->guest_mac[4],
+				    wg_gos_data->guest_mac[5] },
+		.dhcpmsg.sname = { 0 },
+		.dhcpmsg.file = { 0 },
+		.dhcpmsg.cookie = PP_HTONL (DHCP_MAGIC_COOKIE),
+		.dhcpmsg.options = { DHCP_OPTION_MESSAGE_TYPE,
+				     1,
+				     type,
+				     DHCP_OPTION_SERVER_ID,
+				     4,
+				     wg_gos_data->gateway[0],
+				     wg_gos_data->gateway[1],
+				     wg_gos_data->gateway[2],
+				     wg_gos_data->gateway[3],
+				     DHCP_OPTION_SUBNET_MASK,
+				     4,
+				     wg_gos_data->netmask[0],
+				     wg_gos_data->netmask[1],
+				     wg_gos_data->netmask[2],
+				     wg_gos_data->netmask[3],
+				     DHCP_OPTION_ROUTER,
+				     4,
+				     wg_gos_data->gateway[0],
+				     wg_gos_data->gateway[1],
+				     wg_gos_data->gateway[2],
+				     wg_gos_data->gateway[3],
+				     DHCP_OPTION_DNS_SERVER,
+				     4,
+				     wg_gos_data->gos_dns[0],
+				     wg_gos_data->gos_dns[1],
+				     wg_gos_data->gos_dns[2],
+				     wg_gos_data->gos_dns[3],
+				     DHCP_OPTION_LEASE_TIME,
+				     4,
+				     0x00,
+				     0x01,
+				     0x51,
+				     0x80,
+				     DHCP_OPTION_END }
+	};
+	d->dhcpmsg.xid = x_id;
+	iphdr = (struct ip_hdr *)((u8 *)d + SIZEOF_ETH_HDR);
+	iphdr->_chksum = ipchecksum ((u8 *)iphdr, 20);
+}
+
+static void
+send_to_wg_pbuf_free (struct pbuf *q)
+{
+	struct send_to_wg_pbuf *p = (void *)q;
+	free (p->buffer);
+	mem_free (p);
+}
+
+static void
+send_to_wg (void *packet, int size)
+{
+	struct pbuf *q;
+	ip4_addr_t ipaddr;
+	struct netif *netif = netif_wg;
+
+	LWIP_ASSERT ("netif != NULL", netif != NULL);
+	struct send_to_wg_pbuf *p = mem_malloc (sizeof *p);
+	LWIP_ASSERT ("send_to_wg: mem_malloc", p != NULL);
+	p->buffer = packet;
+	p->pc.custom_free_function = send_to_wg_pbuf_free;
+	q = pbuf_alloced_custom (PBUF_RAW, size, PBUF_REF, &p->pc, packet,
+				 size);
+	LWIP_ASSERT ("send_to_wg: pbuf_alloced_custom", q != NULL);
+	u8_t pbuf_header_ret = pbuf_header (q, -SIZEOF_ETH_HDR);
+	LWIP_ASSERT ("send_to_wg: pbuf_header", pbuf_header_ret == 0);
+	struct ip_hdr *ip_header = q->payload;
+	if (q->len >= sizeof *ip_header)
+		ip4_addr_copy (ipaddr, ip_header->dest);
+	else
+		ipaddr.addr = 0;
+	netif->output (netif, q, &ipaddr);
+	pbuf_free (q);
+}
+
+static int
+send_to_vm_guest (struct pbuf *pbuf, struct net_ip_data *p)
+{
+	unsigned int total_size;
+	void *buffer;
+
+	if (pbuf->tot_len == pbuf->len &&
+	    pbuf_header (pbuf, sizeof p->wg_gos_data->fake_eth) == 0) {
+		/* Fast path: use pbuf->payload directly. */
+		total_size = pbuf->tot_len;
+		buffer = pbuf->payload;
+		memcpy (buffer, p->wg_gos_data->fake_eth,
+			sizeof p->wg_gos_data->fake_eth);
+		net_main_send_virt (p, 1, &buffer, &total_size, true);
+	} else {
+		total_size = pbuf->tot_len + sizeof p->wg_gos_data->fake_eth;
+		buffer = mem_malloc (total_size);
+		if (buffer == NULL)
+			panic ("No memory to alloc");
+		memcpy (buffer, p->wg_gos_data->fake_eth,
+			sizeof p->wg_gos_data->fake_eth);
+		pbuf_copy_partial (pbuf,
+				   buffer + sizeof p->wg_gos_data->fake_eth,
+				   pbuf->tot_len, 0);
+		net_main_send_virt (p, 1, &buffer, &total_size, true);
+		mem_free (buffer);
+	}
+	pbuf_free (pbuf);
+	return 1;
+}
+
+int
+wg_ip4_input_hook (struct pbuf *pbuf, struct netif *inp)
+{
+	if (netif_vm == NULL || netif_wg == NULL)
+		return 0;
+	if (inp == netif_wg) {
+		if (pbuf != NULL) {
+			struct net_ip_data *p = netif_vm->state;
+			if (!p->wg_gos_data->wg_gos_ip_cmp)
+				return send_to_vm_guest (pbuf, p);
+			ip_addr_t dest_ip;
+			struct ip_hdr *ip_header = pbuf->payload;
+			ip_addr_copy_from_ip4 (dest_ip, ip_header->dest);
+			if (ip_addr_cmp (&dest_ip, &p->wg_gos_data->wg_gos_ip))
+				return send_to_vm_guest (pbuf, p);
+		} else {
+			printf ("wg_ip4_input_hook : pbuf is NULL\n");
+		}
+	}
+	return 0;
+}
+
+static void
+reply_arp (struct eth_hdr *ethhdr, void *packet,
+	   struct wg_gos_data *wg_gos_data, int size,
+	   struct net_ip_data *handle)
+{
+	u8 arp_type = arp_checker (packet, size, wg_gos_data);
+
+	if (arp_type == ARP_ASK_GATEWAY) {
+		struct arp_data arp_response;
+		unsigned int arp_size = sizeof arp_response;
+		void *pointer_arp = &arp_response;
+
+		arp_maker (packet, &arp_response, wg_gos_data);
+		net_main_send_virt (handle, 1, &pointer_arp, &arp_size, true);
+	}
+}
+
+static bool
+reply_dhcp (void *packet, struct wg_gos_data *wg_gos_data, int size,
+	    struct net_ip_data *handle)
+{
+	u32 x_id;
+	int dhcp_type = dhcp_checker (packet, size, &x_id);
+	struct dhcp_data dhcp_response;
+	if (dhcp_type == DHCP_DISCOVER)
+		dhcp_maker (&dhcp_response, x_id, DHCP_OFFER, wg_gos_data);
+	else if (dhcp_type == DHCP_REQUEST)
+		dhcp_maker (&dhcp_response, x_id, DHCP_ACK, wg_gos_data);
+	else
+		return false;
+	unsigned int dhcp_size = sizeof dhcp_response;
+	void *pointer_dhcp = &dhcp_response;
+	net_main_send_virt (handle, 1, &pointer_dhcp, &dhcp_size, true);
+	return true;
+}
+
+static void
+wg_gos_routing (void *arg)
+{
+	struct wg_gos_task *task = arg;
+	struct net_ip_data *p = task->param;
+	int size;
+	void *packet;
+
+	for (u32 i = 0; i < task->num_packets; i++) {
+		packet = task->packets[i];
+		size = task->packet_sizes[i];
+		struct eth_hdr *ethhdr = packet;
+		if (size < sizeof *ethhdr)
+			continue;
+		switch (PP_HTONS (ethhdr->type)) {
+		case ETHTYPE_ARP:
+			reply_arp (ethhdr, packet, p->wg_gos_data, size, p);
+			free (packet);
+			break;
+		case ETHTYPE_IP:
+			if (!reply_dhcp (packet, p->wg_gos_data, size, p))
+				send_to_wg (packet, size);
+			else
+				free (packet);
+			break;
+		default:
+			free (packet);
+			break;
+		}
+	}
+	free (task->packets);
+	free (task->packet_sizes);
+	free (task);
+}
+
+void
+wg_gos_task_add (u32 num_packets, void **packets, u32 *packet_sizes,
+		 void *param)
+{
+	struct wg_gos_task *task;
+
+	task = alloc (sizeof *task);
+	task->num_packets = num_packets;
+	task->packets = alloc (sizeof (void *) * num_packets);
+	task->packet_sizes = alloc (sizeof (u32) * num_packets);
+
+	for (u32 i = 0; i < num_packets; i++) {
+		task->packet_sizes[i] = packet_sizes[i];
+		task->packets[i] = alloc (packet_sizes[i]);
+		memcpy (task->packets[i], packets[i], packet_sizes[i]);
+	}
+	task->param = param;
+	tcpip_begin (wg_gos_routing, task);
+}
+
+void
+wg_gos_init (struct net_ip_data *p, struct netif *wg1, struct netif *wg2)
+{
+	struct wg_gos_data *wg_gos_data = p->wg_gos_data;
+	LWIP_ASSERT ("wg_gos_data != NULL", wg_gos_data != NULL);
+	netif_vm = netif_find ("vm0");
+	LWIP_ASSERT ("netif_vm != NULL", netif_vm != NULL);
+	netif_wg = wg2 == NULL ? wg1 : wg2;
+	LWIP_ASSERT ("netif_wg != NULL", netif_wg != NULL);
+	if (wg2 == NULL) {
+		wg_gos_data->wg_gos_ip_cmp = true;
+		IP_ADDR4 (&wg_gos_data->wg_gos_ip, config.wg_gos.ipaddr[0],
+			  config.wg_gos.ipaddr[1], config.wg_gos.ipaddr[2],
+			  config.wg_gos.ipaddr[3]);
+		wg_gos_data->gateway = config.wg.gateway;
+		wg_gos_data->netmask = config.wg.netmask;
+	} else {
+		wg_gos_data->wg_gos_ip_cmp = false;
+		wg_gos_data->gateway = config.wg_gos.wg.gateway;
+		wg_gos_data->netmask = config.wg_gos.wg.netmask;
+	}
+	wg_gos_data->gos_ipaddr = config.wg_gos.ipaddr;
+	wg_gos_data->gos_dns = config.wg_gos.dns;
+}

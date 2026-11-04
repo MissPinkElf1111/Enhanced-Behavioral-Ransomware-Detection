@@ -1,0 +1,37 @@
+# -*- makefile-gmake -*-
+
+# commands
+AR = $(CROSS_COMPILE)ar
+CC = $(CROSS_COMPILE)gcc
+RM = rm -f
+OBJCOPY = $(CROSS_COMPILE)objcopy
+SED = sed
+SIZE = $(CROSS_COMPILE)size
+STRIP = $(CROSS_COMPILE)strip
+PYTHON = python3
+TOUCH = touch
+
+# files
+CONFIG = .config
+dir := $(DIR:/=)/
+dir := $(dir:./%=%)
+outo = output.o
+outa = output.a
+outp = processes.o
+target = $(outo)
+defouto = $(dir)$(outo)
+defouta = $(dir)$(outa)
+defoutp = $(dir)$(outp)
+flags = .flags
+depends = .depends
+objects = .objects
+boptions = .boptions
+
+# OpenSSL
+OPENSSL_VERSION = 1.0.0l
+
+# V
+V-makeopt-0 := -s
+V-info-1 := @:
+V-makeopt := $(V-makeopt-$(V))
+V-info := $(V-info-$(V)) echo ' '
