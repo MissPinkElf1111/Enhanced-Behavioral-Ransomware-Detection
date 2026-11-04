@@ -15,6 +15,10 @@ The pipeline extracts behavioural features, trains models on benign activity, an
 - Score-level fusion of storage and memory results.
 - Execution-level detection evaluation.
 
+## Necessary Datasets
+
+Download and unzip the dataset for training and testing the models: -[Datasets](https://drive.google.com/drive/folders/1fiu80Yl4lMNHNa6HX0gEigzYfMX472Ox?usp=sharing).
+
 ## Repository Structure
 
 | Script | Purpose | Output |
