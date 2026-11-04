@@ -2,6 +2,8 @@
 
 This tree is **matsu/bitvisor @ `a6a2c2a`** plus a storage+memory access-pattern collector. This document covers the environment it was adapted to and how to build, deploy, and run it. Upstream BitVisor's license is in `LICENSE`.
 
+> Note: vendored crypto test fixtures (OpenSSL/mbedTLS demo & test private keys, `.pem` / `.key`) are removed from this copy — they are unused by the build and trip GitHub secret scanning.
+
 ## 1. Target environment
 
 Built and tested on the collection host:
