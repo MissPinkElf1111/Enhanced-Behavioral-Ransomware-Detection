@@ -26,7 +26,7 @@ weight_sweep_results/
     ratios/storageX_memoryY/performance/ metrics, predictions, thresholds and confusion matrices for each ratio
 ```
 
-Only the `performance` folder of each ratio is in this repository, to keep it small. The full `evaluation` and `analysis` folders for every ratio, and the original 0.5 : 0.5 results, are in the shared Google Drive folder.
+Only the `performance` folder of each ratio is in this repository, to keep it small. The full `evaluation` and `analysis` folders for every ratio, and the original 0.5 : 0.5 results, are in the shared Google Drive folder: https://drive.google.com/drive/folders/12Bp7la8mbBcStTs9ZQR9EXAn0qw8R7LN?usp=sharing
 
 ## Results (combined result, 35 test executions: 28 benign, 7 ransomware)
 
