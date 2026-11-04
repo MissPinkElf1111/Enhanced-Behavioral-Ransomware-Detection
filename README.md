@@ -196,6 +196,12 @@ The script also evaluates three storage/memory fusion-weight settings:
 
 The report identifies the preferred weight using validation F1 score. Results, training summaries, models, and plots are saved in `ablation/`.
 
+### Fusion Weight Sweep
+
+`sweep_weights.py` tests storage:memory fusion weights from 0.0:1.0 to 1.0:0.0 in steps of 0.1, extending the three weights in `08A_ablation_study.py`. For each weight it runs a temporary copy of `08_evaluate_models.py` with the new weights (the original file is not edited), then runs `09_analyze_evalutaion.py` and `10_evaluate_detection.py`. The models are not retrained, so only the fused score changes.
+
+Main findings (35 combined test executions): from 0.7:0.3 upward the test results are identical (F1 87.50%, recall 100%, test ROC-AUC 100%, 2 false alarms). Storage alone (1.0:0.0) ties with the best combined weights on the same executions, and memory alone is weakest (F1 53.33%). `Zip_1866_16_05` is flagged at every weight. Details and the results table are in `weight_sweep_results/`.
+
 ### Detection Evaluation
 
 `10_evaluate_detection.py` calibrates each execution-level threshold at the **95th percentile of benign validation execution scores**.
