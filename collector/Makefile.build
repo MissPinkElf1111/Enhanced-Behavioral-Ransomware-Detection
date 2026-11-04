@@ -1,0 +1,160 @@
+# -*- makefile-gmake -*-
+.PHONY : build-dir
+build-dir : build-target
+
+include Makefile.common
+include $(CONFIG)
+include Makefile.build.$(ARCH)
+CFLAGS_EDK2_INC = -fshort-wchar -Iedk2/MdePkg/Include/ $(CFLAGS_EDK2_ARCH_INC)
+backtrace-n = -fomit-frame-pointer
+backtrace-y = -fno-omit-frame-pointer
+backtrace = $(backtrace-$(CONFIG_BACKTRACE))
+CFLAGS = -nostdinc -g -O -ffreestanding -fno-builtin -fno-stack-protector \
+	 -fno-PIE -Wall $(CONSTANTS-y) -Iinclude -I$(DIR) $(backtrace) \
+	 -ffunction-sections -fdata-sections \
+	 $(CFLAGS_ARCH)
+ASFLAGS = -g -Wa,-I,$(DIR) $(ASFLAGS_ARCH)
+LDFLAGS = -g -nostdlib -Wl,--build-id=none -static $(LDFLAGS_ARCH)
+outo_p = $(outo)_p
+outa_p = $(outa)_p
+outp_p = $(outp)_p
+target = $(outo)
+defouto = $(dir)$(outo)
+defouta = $(dir)$(outa)
+defoutp = $(dir)$(outp)
+
+include $(dir)Makefile
+subouto := $(subdirs-y:%=$(dir)%/$(outo))
+subouta := $(asubdirs-y:%=$(dir)%/$(outa))
+suboutp := $(psubdirs-y:%=$(dir)%/$(outp))
+subouto_p := $(subdirs-y:%=$(dir)%/$(outo_p))
+subouta_p := $(asubdirs-y:%=$(dir)%/$(outa_p))
+suboutp_p := $(psubdirs-y:%=$(dir)%/$(outp_p))
+make-detect := b$(shell echo g)
+m-b := b
+m-bg := g
+m := $(m-$(make-detect))
+bins-y ?=
+bobjs-y-name := $(bins-y:%=%-objs)
+bobjs-y-b := $(bobjs-y-name:%=$(%))
+bobjs-y-g := $(foreach i,$(bobjs-y-name),$($(i)))
+bobjs-y := $(bobjs-y-$(m))
+blibs-y-name := $(bins-y:%=%-libs)
+blibs-y-b := $(blibs-y-name:%=$(%))
+blibs-y-g := $(foreach i,$(blibs-y-name),$($(i)))
+blibs-y := $(blibs-y-$(m))
+bstacksize-y-name :=  $(bins-y:%=%-stacksize)
+bstacksize-y-b := $(bstacksize-y-name:%=$(%).)
+bstacksize-y-g := $(foreach i,$(bstacksize-y-name),$($(i)).)
+bstacksize-y := $(bstacksize-y-$(m))
+bobjs = $(bobjs-y:%=$(dir)%)
+objs = $(subouto) $(objs-y:%=$(dir)%) $(subouta)
+deps = $(objs-y:%.o=$(dir)%.d) $(bobjs-y:%.o=$(dir)%.d)
+bins = $(bins-y:%=$(dir)%.bin)
+flags-data := CFLAGS=$(CFLAGS) ASFLAGS=$(ASFLAGS) LDFLAGS=$(LDFLAGS)
+depends-data := include $(deps)
+objects-data := $(objs) $(suboutp) $(bobjs)
+boptions-data := bobjs=$(bobjs) blibs=$(blibs-y) bstacksize=$(bstacksize-y)
+
+$(defouto) : $(objs) $(suboutp) $(dir)$(depends) $(dir)$(objects)
+	$(V-info) LD $(defouto)
+	$(CC) $(LDFLAGS) -Wl,-r -o $(defouto) $(objs) $(suboutp)
+
+$(defouta) : $(objs) $(dir)$(depends)
+	$(V-info) AR $(defouta)
+	$(RM) $(defouta)
+	$(AR) cr $(defouta) $(objs)
+
+$(defoutp) : $(bins) $(suboutp) $(dir)$(depends) $(dir)$(objects)
+	$(V-info) LD $(defoutp)
+	$(CC) $(ASFLAGS) $(LDFLAGS) -Wl,-r -o $(defoutp) $(bins:%=%.s) \
+		$(suboutp)
+
+$(bins) : $(bobjs) $(blibs-y) $(objs) $(dir)$(boptions)
+	$(V-info) LD $@
+	echo '.section .processes' > $@.s
+	echo '.long prc_$(*F)_name, 0, prc_$(*F)_bin, 0' >> $@.s
+	echo '.quad prc_$(*F)_bin_end - prc_$(*F)_bin' >> $@.s
+	echo '.quad $($(*F)-stacksize)+0' >> $@.s
+	echo '.data' >> $@.s
+	echo 'prc_$(*F)_name: .string "$(*F)"' >> $@.s
+	echo 'prc_$(*F)_bin: .incbin "$@"' >> $@.s
+	echo 'prc_$(*F)_bin_end:' >> $@.s
+	$(CC) $(LDFLAGS) -Wl,--gc-sections -o $@.debug \
+		$($(*F)-objs:%=$(dir)%) $($(*F)-libs) $(objs)
+	$(STRIP) -o $@ $@.debug
+
+$(objs) $(bobjs) : $(dir)$(flags)
+
+$(dir)$(flags) : update-flags
+	@:
+
+.PHONY : update-flags
+update-flags :
+	@set -- $(flags-data); \
+	case "$$*" in "`$(SED) 1q $(dir)$(flags) 2>/dev/null`");; \
+	*)echo "$$*" > $(dir)$(flags);; esac
+
+$(dir)$(depends) : update-depends
+	@:
+
+.PHONY : update-depends
+update-depends :
+	set -- $(depends-data); \
+	case $$# in 1)a='#empty';; *)a="$$*";; esac; \
+	case "$$a" in "`$(SED) 1q $(dir)$(depends) 2>/dev/null`");; \
+	*)while shift; case $$# in 0)false;; *):;; esac; do : >> "$$1"; done; \
+	echo "$$a" > $(dir)$(depends);; esac
+
+$(dir)$(objects) : update-objects
+	@:
+
+.PHONY : update-objects
+update-objects :
+	@set -- $(objects-data); \
+	case "$$*" in "`$(SED) 1q $(dir)$(objects) 2>/dev/null`");; \
+	*)echo "$$*" > $(dir)$(objects);; esac
+
+$(dir)$(boptions) : update-boptions
+	@:
+
+.PHONY : update-boptions
+update-boptions :
+	@set -- $(boptions-data); \
+	case "$$*" in "`$(SED) 1q $(dir)$(boptions) 2>/dev/null`");; \
+	*)echo "$$*" > $(dir)$(boptions);; esac
+
+.PHONY : build-target
+build-target : $(dir)$(target)
+
+$(subouto) $(subouta) $(suboutp) : $(subouto_p) $(subouta_p) $(suboutp_p)
+	@:
+
+.PHONY : $(subouto_p) $(subouta_p) $(suboutp_p)
+$(subouto_p) $(subouta_p) $(suboutp_p) :
+	case "`$(SED) 1q $(@D)/$(depends) 2>/dev/null`" in \
+	''): >> $(@D)/$(depends);; esac
+	$(MAKE) $(V-makeopt) -f Makefile.build $(@:_p=) DIR=$(@D) V=$(V) \
+		ARCH=$(ARCH)
+
+# Suffix rules
+.SUFFIXES :
+.SUFFIXES : .c .s .o .bin
+
+.c.o :
+	$(V-info) CC $@
+	$(CC) $(CFLAGS) -MD -c -o $@ $< && \
+$(SED) -n -e 's/.*: *//' -e '/^ *$$/d' -e :a -e '/\\$$/{N' -e ba -e '}' \
+-e 's/$$/ :/' -e H -e '$${x' -e p -e q -e '}' < $(@:.o=).d >> $(@:.o=).d || \
+{ $(RM) $@; false; }
+
+.s.o :
+	$(V-info) CC $@
+	$(CC) $(ASFLAGS) -c -o $@ $< && \
+$(SED) -n -e '1{x' -e 's=^=$@ :>=' -e x -e '}' -e 's/#.*//' \
+-e '/\.include ".*"/{s=.*\.include "\([^"]*\)".*=<$(@D)/\1>=' -e H -e '}' \
+-e '$${x' -e 's/>.</ /g' -e 's/>$$//p' -e 's/.*: *//' \
+-e 's/$$/ :/p' -e '}' $< > $(@:.o=).d || { $(RM) $@; false; }
+
+# include
+include $(dir)$(depends)
