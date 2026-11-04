@@ -1,0 +1,31 @@
+Ground truth: 0 = benign (Benign), 1 = ransomware (RanSAP/RanSMAP)
+
+Decision rule: score > 95% of benign
+
+Classification Metrics
+                  method  test_executions  benign_executions  ransomware_executions  accuracy  precision  recall  f1_score  false_positive_rate  false_negative_rate  roc_auc
+     storage_autoencoder               56                 28                     28    0.9643     0.9333  1.0000    0.9655               0.0714               0.0000   0.9949
+        storage_temporal               56                 28                     28    0.9643     0.9333  1.0000    0.9655               0.0714               0.0000   0.9949
+storage_isolation_forest               56                 28                     28    0.9286     0.9615  0.8929    0.9259               0.0357               0.1071   0.9847
+      memory_autoencoder               35                 28                      7    0.8857     0.7143  0.7143    0.7143               0.0714               0.2857   0.9439
+         memory_temporal               35                 28                      7    0.8000     0.5000  0.5714    0.5333               0.1429               0.4286   0.9184
+ memory_isolation_forest               35                 28                      7    0.8857     0.7143  0.7143    0.7143               0.0714               0.2857   0.9541
+          DTBAD_combined               35                 28                      7    0.9143     0.7000  1.0000    0.8235               0.1071               0.0000   0.9745
+
+Confusion Matrices (TN, FP, FN, TP)
+storage_autoencoder: TN=26, FP=2, FN=0, TP=28
+storage_temporal: TN=26, FP=2, FN=0, TP=28
+storage_isolation_forest: TN=27, FP=1, FN=3, TP=25
+memory_autoencoder: TN=26, FP=2, FN=2, TP=5
+memory_temporal: TN=24, FP=4, FN=3, TP=4
+memory_isolation_forest: TN=26, FP=2, FN=2, TP=5
+DTBAD_combined: TN=25, FP=3, FN=0, TP=7
+
+Detection Thresholds
+storage_autoencoder: threshold=0.050467649 (27 benign validation executions)
+storage_temporal: threshold=0.050589602 (27 benign validation executions)
+storage_isolation_forest: threshold=0.48433271 (27 benign validation executions)
+memory_autoencoder: threshold=0.010602303 (27 benign validation executions)
+memory_temporal: threshold=0.012188298 (27 benign validation executions)
+memory_isolation_forest: threshold=0.428064 (27 benign validation executions)
+DTBAD_combined: threshold=5.1152718 (27 benign validation executions)

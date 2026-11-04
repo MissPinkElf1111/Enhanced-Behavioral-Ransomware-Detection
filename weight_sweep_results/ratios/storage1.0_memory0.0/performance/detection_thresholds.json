@@ -1,0 +1,51 @@
+{
+  "label_0": "benign",
+  "label_1": "ransomware",
+  "calibration": "benign_validation_execution_percentile",
+  "percentile": 95,
+  "decision_rule": "score > threshold => 1; otherwise 0",
+  "methods": {
+    "storage_autoencoder": {
+      "source": "storage",
+      "score_column": "ae_mean_error",
+      "threshold": 0.0504676493,
+      "benign_validation_executions": 27
+    },
+    "storage_temporal": {
+      "source": "storage",
+      "score_column": "temporal_mean_score",
+      "threshold": 0.05058960238917059,
+      "benign_validation_executions": 27
+    },
+    "storage_isolation_forest": {
+      "source": "storage",
+      "score_column": "if_mean_score",
+      "threshold": 0.4843327131088053,
+      "benign_validation_executions": 27
+    },
+    "memory_autoencoder": {
+      "source": "memory",
+      "score_column": "ae_mean_error",
+      "threshold": 0.010602302650000001,
+      "benign_validation_executions": 27
+    },
+    "memory_temporal": {
+      "source": "memory",
+      "score_column": "temporal_mean_score",
+      "threshold": 0.01218829756527483,
+      "benign_validation_executions": 27
+    },
+    "memory_isolation_forest": {
+      "source": "memory",
+      "score_column": "if_mean_score",
+      "threshold": 0.428064004848552,
+      "benign_validation_executions": 27
+    },
+    "DTBAD_combined": {
+      "source": "combined",
+      "score_column": "combined_score",
+      "threshold": 1.421996952771336,
+      "benign_validation_executions": 27
+    }
+  }
+}
