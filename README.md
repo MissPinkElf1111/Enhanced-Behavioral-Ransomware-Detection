@@ -182,6 +182,8 @@ Fusion is performed on matching RanSMAP and Benign execution summaries. RanSAP i
 
 ### Ablation Study
 
+**NOTICE: To run `08A_ablation_study.py`, please make sure that it has ran `05A_paper_feature_engineering.py` successfully!!!**
+
 `08A_ablation_study.py` compares the 23-feature and 86-feature configurations using autoencoder, temporal, Isolation Forest, and combined scores.
 
 It trains the 23-feature models on benign data and loads the expanded-feature execution scores from Step 08. Comparisons use matching executions and check that their window counts agree.
