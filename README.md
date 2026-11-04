@@ -19,6 +19,10 @@ The pipeline extracts behavioural features, trains models on benign activity, an
 
 Download and unzip the dataset for training and testing the models: [Datasets](https://drive.google.com/drive/folders/1fiu80Yl4lMNHNa6HX0gEigzYfMX472Ox?usp=sharing).
 
+## Collected Traces (BitVisor)
+
+Benign storage and memory traces collected with our BitVisor-based collector (`collector/`; see `collector/README.md`): Firefox, Microsoft Office, and Zip, ten runs each at 180 seconds per run, with six CSV files per run. Download: [BitVisor benign traces](https://drive.google.com/drive/folders/1o-hoEbn6YojLLbpUH1qT6eddgYch5BlX?usp=share_link).
+
 ## Repository Structure
 
 | Script | Purpose | Output |
