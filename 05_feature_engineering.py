@@ -1048,19 +1048,12 @@ if __name__ == "__main__":
             flush=True
         )
 
-        starts = discover_starts(
-            files,
-            category
-        )
+        starts = discover_starts(files, category)
 
         if not starts:
             continue
 
-        states, maximum = aggregate(
-            files,
-            category,
-            starts
-        )
+        states, maximum = aggregate(files, category, starts)
 
         df = make_rows(
             category,
@@ -1075,16 +1068,9 @@ if __name__ == "__main__":
             else MEMORY_COLUMNS
         )
 
-        validate_output(
-            df,
-            columns,
-            category
-        )
+        validate_output(df, columns, category)
 
-        write_six_files(
-            category,
-            df
-        )
+        write_six_files(category, df)
 
         print(
             f"{category}: {len(starts)} executions, {len(df):,} windows",
