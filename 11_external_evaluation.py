@@ -27,15 +27,14 @@ import pandas as pd
 
 # Configuration
 BASE = Path(__file__).resolve().parent
-RAW = BASE / "test_dataset"
+RAW = BASE / "external_dataset"
 OUT = BASE / "external_evaluation"
 PREP = OUT / "prepared"
 FEATURES = OUT / "features"
 PRED = OUT / "predictions"
 
 STEP05 = BASE / "05_feature_engineering.py"
-STEP08 = BASE / ("08_evaluate_models"
-                 ".py")
+STEP08 = BASE / "08_evaluate_models.py"
 MODELS = BASE / "models"
 CALIBRATION = BASE / "evaluation"
 PERFORMANCE = BASE / "performance"
