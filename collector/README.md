@@ -103,12 +103,28 @@ ransmapstat.exe                # (no args) print counters + diagnostics
 
 ## 6. Output — 6 CSV files per run
 
-| File | Columns |
-|---|---|
-| `ata_read.csv`, `ata_write.csv` | `t_s, t_ns, LBA, size, entropy` |
-| `mem_read.csv`, `mem_write.csv`, `mem_readwrite.csv`, `mem_exec.csv` | `t_s, t_ns, GPA, size, entropy, type` |
+Each run produces six headerless CSV files; one access per line.
 
-- `t_s` = UNIX seconds, `t_ns` = nanoseconds.
-- `entropy` normalized to 0–1; `-1` = not applicable (reads / exec).
-- `size` in bytes: storage writes are per 4096‑byte sector; memory ≤ 4096.
-- `type` (memory): `1`=4 KiB, `2`=2 MiB, `3`=1 GiB, `4`=MMIO (MMIO has size 0 / entropy −1).
+### Storage access files — `ata_read.csv`, `ata_write.csv`
+
+- UNIX Timestamp in seconds, t_s [s]
+- UNIX Timestamp in nanoseconds, t_ns [ns]
+- Logical Block Address of an accessed sector, LBA
+- Size of an accessed sector in bytes, size [byte]
+- Normalized Shannon entropy of a written sector, entropy (-1 for reads)
+
+### Memory access files — `mem_read.csv`, `mem_write.csv`, `mem_readwrite.csv`, `mem_exec.csv`
+
+- UNIX Timestamp in seconds, t_s [s]
+- UNIX Timestamp in nanoseconds, t_ns [ns]
+- Guest Physical Address of an accessed page, GPA
+- Size of the sampled page contents in bytes, size [byte]
+- Normalized Shannon entropy of written page contents, entropy (-1 for read, execute, and MMIO)
+- Memory page type, type (1: 4 KiB, 2: 2 MiB, 3: 1 GiB, 4: MMIO)
+
+### Notes
+
+- t_s / t_ns are wall-clock UNIX time; relative time is the value minus the first timestamp of a run.
+- entropy is normalized to a 0 to 1 range; -1 means not applicable (non-write accesses and MMIO).
+- Read rows are one per I/O command; write rows are one per 4096-byte sector.
+- MMIO memory accesses (type 4) have size 0 and entropy -1.
