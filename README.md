@@ -17,7 +17,18 @@ The pipeline extracts behavioural features, trains models on benign activity, an
 
 ## Necessary Datasets
 
-Download and unzip the dataset for training and testing the models: [Datasets](https://drive.google.com/drive/folders/1fiu80Yl4lMNHNa6HX0gEigzYfMX472Ox?usp=sharing).
+The project uses four dataset groups. The first three train and test the models in the main pipeline. The fourth is a held-out set used for external evaluation.
+
+| Folder | Source | Purpose |
+| --- | --- | --- |
+| `RanSMAP` | WannaCry traces from the open RanSMAP dataset | Ransomware storage and memory traces for training and testing |
+| `RanSAP` | WannaCry traces from the open RanSAP dataset | Ransomware storage traces for training and testing |
+| `Benign` | Firefox, Microsoft Office, and Zip traces from the open datasets | Benign activity used to fit the models and set detection thresholds |
+| `External_dataset` | Firefox, Microsoft Office, and Zip collected by our team, plus Ryuk, LockBit, SDelete, and Idle from the open datasets | Unseen executions for external evaluation of the trained models |
+
+`RanSMAP` provides both storage and memory access traces, so it supports all memory and combined evaluation. `RanSAP` provides storage traces only. `Benign` supplies the normal activity that the models learn from. `External_dataset` mixes our own benign collection with additional open ransomware and idle samples to test how the trained models generalise to new executions and new ransomware families.
+
+Download and unzip the datasets for training and testing the models: [Datasets](https://drive.google.com/drive/folders/1fiu80Yl4lMNHNa6HX0gEigzYfMX472Ox?usp=sharing).
 
 ## Collected Traces (BitVisor)
 
