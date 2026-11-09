@@ -24,7 +24,7 @@ The project uses four dataset groups. The first three train and test the models 
 | `RanSMAP` | WannaCry traces from the open RanSMAP dataset | Ransomware storage and memory traces for training and testing |
 | `RanSAP` | WannaCry traces from the open RanSAP dataset | Ransomware storage traces for training and testing |
 | `Benign` | Firefox, Microsoft Office, and Zip traces from the open datasets | Benign activity used to fit the models and set detection thresholds |
-| `External_dataset` | Firefox, Microsoft Office, and Zip collected by our team, plus Ryuk, LockBit, SDelete, and Idle from the open datasets | Unseen executions for external evaluation of the trained models |
+| `External_dataset` | Firefox, Microsoft Office, and Zip collected by our team, plus Ryuk, LockBit, SDelete, unseen WannaCry, and Idle from the open datasets | Unseen executions for external evaluation of the trained models |
 
 `RanSMAP` provides both storage and memory access traces, so it supports all memory and combined evaluation. `RanSAP` provides storage traces only. `Benign` supplies the normal activity that the models learn from. `External_dataset` mixes our own benign collection with additional open ransomware and idle samples to test how the trained models generalise to new executions and new ransomware families.
 
