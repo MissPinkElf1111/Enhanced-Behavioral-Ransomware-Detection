@@ -242,6 +242,12 @@ The script calculates accuracy, precision, recall, F1 score, specificity, false 
 
 Anomaly scores indicate deviation from learned benign behaviour. They are not ransomware probabilities.
 
+### External Evaluation
+
+`11_external_evaluation.py` evaluates external storage and memory traces using saved models and detection thresholds. It generates predictions, classification metrics, and feature-drift diagnostics.
+
+By default, it uses an experimental dual-confirmation rule requiring the combined, storage temporal, and memory temporal detectors to agree before flagging ransomware. Original combined predictions are also saved for comparison.
+
 ## Main Configuration
 
 Settings are defined as constants inside the scripts.
