@@ -331,6 +331,9 @@ Training epochs and validation reconstruction losses are not reported in the mid
 | `splits_paper/` | Comparison features partitioned using the shared execution assignments |
 | `ablation/` | Feature-set and fusion-weight comparisons, training summaries, reports, and plots |
 | `ablation/models_paper/` | Models and calibration information for the 23-feature configuration |
+| `external_evaluation/` | External-data preparation, extracted features, predictions, metrics, and diagnostic reports |
+| `weight_sweep/` | Generated outputs and logs for each fusion-weight experiment |
+| `weight_sweep_results/` | Committed fusion-weight results and supporting reports |
 
 ### Saved Models
 
