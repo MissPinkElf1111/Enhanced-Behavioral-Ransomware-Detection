@@ -87,6 +87,7 @@ These fields preserve the source information needed to identify executions.
 ### Feature Extraction
 
 `05_feature_engineering.py` aggregates access events into **0.1-second windows**.
+Entropy statistics exclude negative placeholder values and nonfinite values. The feature counts remain 26 storage features and 60 memory features.
 
 | Modality | Feature Count | Main Feature Groups |
 | --- | --- | --- |
