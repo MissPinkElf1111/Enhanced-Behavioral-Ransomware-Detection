@@ -50,6 +50,9 @@ Benign storage and memory traces collected with our BitVisor-based collector (`c
 | `08A_ablation_study.py` | Compare the 23-feature and 86-feature configurations and evaluate three fusion-weight settings | `ablation/` |
 | `09_analyze_evalutaion.py` | Analyse score distributions, novelty rates, outliers, and data quality | `analysis/` |
 | `10_evaluate_detection.py` | Calibrate detection thresholds and calculate classification metrics | `performance/` |
+| `11_external_evaluation.py` | Evaluate external executions using saved models and thresholds, compare original and conservative detection rules, and report feature drift | `external_evaluation/` |
+| `sweep_weights.py` | Evaluate different storage/memory fusion weights without retraining the models | `weight_sweep/` |
+| `collector/` | BitVisor-based collector for storage and memory access traces | Six CSV files per execution | 
 
 ### Supported Source Files
 
