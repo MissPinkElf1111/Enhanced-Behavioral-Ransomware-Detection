@@ -355,23 +355,17 @@ performance/performance_report.txt
 performance/10_confusion_matrices.png
 ```
 
-## Limitations and Planned Work
+## Limitations and Future Work
 
-The current experiment covers WannaCry only and uses a small test set. Cross-dataset and cross-hardware generalisation have not yet been established.
+### Limitations
 
-The report also records variation in memory results between two laptop runs, which requires further investigation.
+- The pipeline performs offline analysis rather than live ransomware detection.
+- Results depend on the datasets, applications, and hardware configurations evaluated.
+- The experimental dual-confirmation rule may reduce false positives but can miss ransomware when the detectors disagree.
 
-Planned work includes:
+### Future Work
 
-- Additional trace collection using BitVisor and Windows 10.
-- Random Forest and 1D-CNN–LSTM comparison models.
-- Cross-dataset and cross-hardware testing.
-- Individual-feature, feature-group, and window-size ablation beyond the implemented 23-versus-86 feature comparison.
-- Additional fusion methods beyond the implemented 40/60, 50/50, and 60/40 weight comparisons.
-- Repeated experiments with multiple random seeds.
-- Comparisons using the same execution sets.
-
-The repository contains scripts 01–10, with additional scripts 05A and 08A for feature-set and fusion-weight comparisons. A separate cross-dataset and cross-hardware generalisation stage is not yet included.
+Future research could extend evaluation to more ransomware families, benign applications, and hardware configurations. Other directions include live detection, additional model comparisons, and further evaluation of feature selection and score-fusion methods.
 
 ## Authors
 
